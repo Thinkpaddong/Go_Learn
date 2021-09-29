@@ -1,9 +1,9 @@
 /*
  * @Author: Thinkpaddong
  * @Date: 2021-09-29 17:13:48
- * @LastEditTime: 2021-09-29 20:07:59
+ * @LastEditTime: 2021-09-30 00:11:01
  * @Description:
- * @FilePath: /Test-for-github/Go/lesson4/绘图事件.go
+ * @FilePath: /Test-for-github/Go/lesson4/绘图事件/绘图事件.go
  */
 package main
 
@@ -20,7 +20,7 @@ func main() {
 	gtk.Init(&os.Args)
 	//加载glade上的控件
 	builder := gtk.NewBuilder()
-	builder.AddFromFile("./UI.glade")
+	builder.AddFromFile("./ui.glade")
 	//获取glade上的控件
 	win := gtk.WindowFromObject(builder.GetObject("window1"))
 
@@ -44,8 +44,8 @@ func main() {
 		painter := win.GetWindow().GetDrawable()
 		gc := gdk.NewGC(painter)
 		//创建图片资源
-		bg, _ := gdkpixbuf.NewPixbufFromFileAtScale("../Image/bk.jpg", w, h, false)
-		face, _ := gdkpixbuf.NewPixbufFromFileAtScale("../Image/face.jpg", 80, 80, false)
+		bg, _ := gdkpixbuf.NewPixbufFromFileAtScale("../image/bk.jpg", w, h, false)
+		face, _ := gdkpixbuf.NewPixbufFromFileAtScale("../image/face.jpg", 80, 80, false)
 		painter.DrawPixbuf(gc, bg, 0, 0, 0, 0, -1, -1, gdk.RGB_DITHER_NONE, 0, 0)
 		painter.DrawPixbuf(gc, face, 0, 0, x, 150, -1, -1, gdk.RGB_DITHER_NONE, 0, 0)
 		//释放图片资源
@@ -53,16 +53,16 @@ func main() {
 		face.Unref()
 	})
 
-	button := gtk.WindowFromObject(builder.GetObject("button1"))
+	// button := gtk.WindowFromObject(builder.GetObject("button1"))
 
-	button.Clicked(func() {
-		x += 50
-		if x >= w {
-			x = 0
-		}
-		//刷图，整个窗口区域刷图
-		win.QueueDraw()
-	})
+	// button.Clicked(func() {
+	// 	x += 50
+	// 	if x >= w {
+	// 		x = 0
+	// 	}
+	// 	//刷图，整个窗口区域刷图
+	// 	win.QueueDraw()
+	// })
 
 	win.ShowAll()
 
