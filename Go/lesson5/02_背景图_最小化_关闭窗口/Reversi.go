@@ -1,9 +1,9 @@
 /*
  * @Author: Thinkpaddong
- * @Date: 2021-09-29 20:45:00
- * @LastEditTime: 2021-09-29 23:43:57
+ * @Date: 2021-09-29 23:45:59
+ * @LastEditTime: 2021-09-30 15:19:44
  * @Description:
- * @FilePath: /Test-for-github/Go/lesson5/无边框窗口/Reversi.go
+ * @FilePath: /lesson5/02_背景图_最小化_关闭窗口/Reversi.go
  */
 
 package main
@@ -14,13 +14,16 @@ import (
 	"unsafe"
 
 	"github.com/mattn/go-gtk/gdk"
+	"github.com/mattn/go-gtk/gdkpixbuf"
 	"github.com/mattn/go-gtk/glib"
 	"github.com/mattn/go-gtk/gtk"
 )
 
 //控制结构体
 type ChessWidge struct {
-	window *gtk.Window
+	window      *gtk.Window //窗口
+	buttonMin   *gtk.Button //最小化按钮
+	buttonClose *gtk.Button //关闭按钮
 }
 
 //控制属性结构体
@@ -33,6 +36,32 @@ type ChessInfo struct {
 type Chessboard struct {
 	ChessWidge
 	ChessInfo
+}
+
+/**
+ * @description: 给按钮设置图标
+ * @param {*}
+ * @return {*}
+ */
+func ButtonSetImageFromFile(button *gtk.Button, filename string) {
+	//获取按钮的大小
+	w, h := 0, 0
+	button.GetSizeRequest(&w, &h)
+
+	//创建pixbuf
+	pixbuf, _ := gdkpixbuf.NewPixbufFromFileAtScale(filename, w-10, h-10, false)
+
+	//创建image
+	image := gtk.NewImageFromPixbuf(pixbuf)
+
+	//释放批pixbuf
+	pixbuf.Unref()
+
+	//给按钮设置图片
+	button.SetImage(image)
+
+	//去掉按钮的焦距
+	button.SetCanFocus(false)
 }
 
 /**
@@ -55,6 +84,14 @@ func (obj *Chessboard) CreateWindow() {
 
 	//设置事件，让窗口可以捕获鼠标点击和移动
 	obj.window.SetEvents(int(gdk.BUTTON_PRESS_MASK | gdk.BUTTON1_MOTION_MASK))
+
+	//获取按钮控件
+	obj.buttonMin = gtk.ButtonFromObject(builder.GetObject("buttonMin"))
+	obj.buttonClose = gtk.ButtonFromObject(builder.GetObject("buttonClose"))
+
+	//给按钮设置图片
+	ButtonSetImageFromFile(obj.buttonMin, "../image/min.png")
+	ButtonSetImageFromFile(obj.buttonClose, "../image/close.png")
 }
 
 /**
@@ -104,6 +141,30 @@ func MouseMoveEvent(ctx *glib.CallbackContext) {
 
 }
 
+func PainEvent(ctx *glib.CallbackContext) {
+
+	// 获取用户传递参数
+	data := ctx.Data()
+	obj, ok := data.(*Chessboard) //类型断言
+	if !ok {
+		fmt.Println("PainEvent Chessboard err")
+		return
+	}
+
+	// 获取画家，设置绘图区域
+	painter := obj.window.GetWindow().GetDrawable()
+	gc := gdk.NewGC(painter)
+
+	//新建pixbuf
+	pixbuf, _ := gdkpixbuf.NewPixbufFromFileAtScale("../image/bg.jpg", obj.w, obj.h, false)
+
+	//画图
+	painter.DrawPixbuf(gc, pixbuf, 0, 0, 0, 0, -1, -1, gdk.RGB_DITHER_NONE, 0, 0)
+
+	//释放资源
+	pixbuf.Unref()
+}
+
 /**
  * @description: 方法 事件、信号处理
  * @param {*}
@@ -113,7 +174,27 @@ func (obj *Chessboard) HandleSignal() {
 	//鼠标点击事件 button-press-event
 	obj.window.Connect("button-press-event", MousePressEvent, obj)
 
-	//鼠标移动事件
+	//鼠标移动事件 montion-notify-event
+	obj.buttonClose.Clicked("motion-notify-event", MouseMoveEvent, obj)
+
+	// 按钮的信号处理
+	obj.buttonClose.Clicked(func() {
+		gtk.MainQuit() //关闭窗口
+	})
+
+	obj.buttonMin.Clicked(func() {
+		obj.window.Iconify() //最小化窗口
+	})
+
+	//绘图相关
+	//大小改变事件 configure_event
+	obj.window.Connect("configure_event", func() {
+		obj.window.QueueDraw()
+	})
+
+	//绘图事件 expose-event
+	obj.window.Connect("expose-event", PainEvent, obj)
+
 }
 
 func main() {
@@ -125,6 +206,10 @@ func main() {
 
 	//创建控件，设置控件属性
 	obj.CreateWindow()
+
+	//事件信号处理
+	obj.HandleSignal()
+
 	//显示控件
 	obj.window.Show()
 

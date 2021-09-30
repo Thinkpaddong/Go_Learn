@@ -1,9 +1,9 @@
 /*
  * @Author: Thinkpaddong
- * @Date: 2021-09-29 20:45:00
- * @LastEditTime: 2021-09-29 23:59:29
+ * @Date: 2021-09-30 11:25:55
+ * @LastEditTime: 2021-09-30 14:06:19
  * @Description:
- * @FilePath: /Test-for-github/Go/lesson5/背景图_最小化_关闭窗口/Reversi.go
+ * @FilePath: /lesson5/03_界面其他设计/Reversi.go
  */
 
 package main
@@ -24,6 +24,11 @@ type ChessWidge struct {
 	window      *gtk.Window //窗口
 	buttonMin   *gtk.Button //最小化按钮
 	buttonClose *gtk.Button //关闭按钮
+	labelBlack  *gtk.Label  //记录黑棋个数
+	labelWhite  *gtk.Label  //记录白棋个数
+	labelTime   *gtk.Label  //记录倒计时
+	imageBlack  *gtk.Image  //提示该黑子落子
+	imageWhite  *gtk.Image  //提示该白子落子
 }
 
 //控制属性结构体
@@ -38,21 +43,48 @@ type Chessboard struct {
 	ChessInfo
 }
 
-//函数：给按钮设置图标
+/**
+ * @description: 给按钮设置图标
+ * @param {*}
+ * @return {*}
+ */
 func ButtonSetImageFromFile(button *gtk.Button, filename string) {
 	//获取按钮的大小
 	w, h := 0, 0
 	button.GetSizeRequest(&w, &h)
+
 	//创建pixbuf
 	pixbuf, _ := gdkpixbuf.NewPixbufFromFileAtScale(filename, w-10, h-10, false)
+
 	//创建image
 	image := gtk.NewImageFromPixbuf(pixbuf)
+
 	//释放批pixbuf
 	pixbuf.Unref()
+
 	//给按钮设置图片
 	button.SetImage(image)
+
 	//去掉按钮的焦距
 	button.SetCanFocus(false)
+}
+
+/**
+ * @description:
+ * @param {*}
+ * @return {*}
+ */
+func ImageSetPicFromFile(image *gtk.Image, filename string) {
+	//获取image的大小
+	w, h := 0, 0
+
+	//创建pixbuf
+	pixbuf, _ := gdkpixbuf.NewPixbufFromFileAtScale(filename, w-10, h-10, false)
+
+	//给image设置图片
+	image.SetFromPixbuf(pixbuf)
+
+	pixbuf.Unref()
 }
 
 /**
@@ -81,8 +113,36 @@ func (obj *Chessboard) CreateWindow() {
 	obj.buttonClose = gtk.ButtonFromObject(builder.GetObject("buttonClose"))
 
 	//给按钮设置图片
-	ButtonSetImageFromFile(obj.buttonMin, "../image/min-png")
-	ButtonSetImageFromFile(obj.buttonClose, "../image/close")
+	ButtonSetImageFromFile(obj.buttonMin, "../image/min.png")
+	ButtonSetImageFromFile(obj.buttonClose, "../image/close.png")
+
+	//标签相关
+	obj.labelBlack = gtk.LabelFromObject(builder.GetObject("labelBlack"))
+	obj.labelWhite = gtk.LabelFromObject(builder.GetObject("labelWhite"))
+	obj.labelTime = gtk.LabelFromObject(builder.GetObject("labelTime"))
+
+	//设置字体
+	obj.labelBlack.ModifyFontSize(50)
+	obj.labelWhite.ModifyFontSize(50)
+	obj.labelTime.ModifyFontSize(30)
+
+	//设置内容
+	obj.labelBlack.SetText("2")
+	obj.labelWhite.SetText("2")
+	obj.labelTime.SetText("20")
+
+	//改变字体颜色
+	obj.labelBlack.ModifyBG(gtk.STATE_NORMAL, gdk.NewColor("white"))
+	obj.labelWhite.ModifyBG(gtk.STATE_NORMAL, gdk.NewColor("white"))
+	obj.labelTime.ModifyBG(gtk.STATE_NORMAL, gdk.NewColor("white"))
+
+	//image相关
+	obj.imageBlack = gtk.ImageFromObject(builder.GetObject("imageBlack"))
+	obj.imageWhite = gtk.ImageFromObject(builder.GetObject("imageWhite"))
+
+	//设置图片
+	ImageSetPicFromFile(obj.imageBlack, "../image/black.png")
+	ImageSetPicFromFile(obj.imageWhite, "../image/white.png")
 }
 
 /**
@@ -132,6 +192,30 @@ func MouseMoveEvent(ctx *glib.CallbackContext) {
 
 }
 
+func PainEvent(ctx *glib.CallbackContext) {
+
+	// 获取用户传递参数
+	data := ctx.Data()
+	obj, ok := data.(*Chessboard) //类型断言
+	if !ok {
+		fmt.Println("PainEvent Chessboard err")
+		return
+	}
+
+	// 获取画家，设置绘图区域
+	painter := obj.window.GetWindow().GetDrawable()
+	gc := gdk.NewGC(painter)
+
+	//新建pixbuf
+	pixbuf, _ := gdkpixbuf.NewPixbufFromFileAtScale("../image/bg.jpg", obj.w, obj.h, false)
+
+	//画图
+	painter.DrawPixbuf(gc, pixbuf, 0, 0, 0, 0, -1, -1, gdk.RGB_DITHER_NONE, 0, 0)
+
+	//释放资源
+	pixbuf.Unref()
+}
+
 /**
  * @description: 方法 事件、信号处理
  * @param {*}
@@ -141,7 +225,27 @@ func (obj *Chessboard) HandleSignal() {
 	//鼠标点击事件 button-press-event
 	obj.window.Connect("button-press-event", MousePressEvent, obj)
 
-	//鼠标移动事件
+	//鼠标移动事件 montion-notify-event
+	obj.buttonClose.Clicked("motion-notify-event", MouseMoveEvent, obj)
+
+	// 按钮的信号处理
+	obj.buttonClose.Clicked(func() {
+		gtk.MainQuit() //关闭窗口
+	})
+
+	obj.buttonMin.Clicked(func() {
+		obj.window.Iconify() //最小化窗口
+	})
+
+	//绘图相关
+	//大小改变事件 configure_event
+	obj.window.Connect("configure_event", func() {
+		obj.window.QueueDraw()
+	})
+
+	//绘图事件 expose-event
+	obj.window.Connect("expose-event", PainEvent, obj)
+
 }
 
 func main() {
