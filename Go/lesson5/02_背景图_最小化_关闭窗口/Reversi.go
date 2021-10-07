@@ -1,5 +1,12 @@
 /*
  * @Author: Thinkpaddong
+ * @Date: 2021-10-07 20:44:39
+ * @LastEditTime: 2021-10-07 20:44:39
+ * @Description:
+ * @FilePath: /Test-for-github/Go/lesson5/02_背景图_最小化_关闭窗口/Reversi.go
+ */
+/*
+ * @Author: Thinkpaddong
  * @Date: 2021-09-29 23:45:59
  * @LastEditTime: 2021-09-30 15:19:44
  * @Description:

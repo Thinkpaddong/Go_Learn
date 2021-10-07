@@ -1,10 +1,11 @@
 /*
  * @Author: Thinkpaddong
- * @Date: 2021-09-30 16:59:53
- * @LastEditTime: 2021-10-07 19:27:54
+ * @Date: 2021-10-07 19:50:21
+ * @LastEditTime: 2021-10-07 20:06:56
  * @Description:
- * @FilePath: /Test-for-github/Go/lesson5/08_吃子/Reversi.go
+ * @FilePath: /Test-for-github/Go/lesson5/10_机器落子/Reversi.go
  */
+
 package main
 
 import (
@@ -51,11 +52,12 @@ type Chessboard struct {
 	ChessWidge
 	ChessInfo
 
-	currentRole int       //该谁落子
-	tipTimerId  int       //实现提示闪烁效果的定时器
-	leftTimerId int       //倒计时定时器id
-	timeNum     int       //记录剩余时间
-	chess       [8][8]int //二位数组标记棋盘状态
+	currentRole   int       //该谁落子
+	tipTimerId    int       //实现提示闪烁效果的定时器
+	machineTimeId int       //机器下子定时器
+	leftTimerId   int       //倒计时定时器id
+	timeNum       int       //记录剩余时间
+	chess         [8][8]int //二位数组标记棋盘状态
 }
 
 /**
@@ -221,6 +223,101 @@ func (obj *Chessboard) CreateWindow() {
 }
 
 /**
+ * @description: 统计个数，判断胜负
+ * @param {*}
+ * @return {*}
+ */
+func (obj *Chessboard) JudgeResult() {
+	// 判断胜负 双方都不可以吃子
+	isOver := false //默认游戏没有结束
+
+	blackNum, whiteNum := 0, 0
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			if obj.chess[i][j] == Black {
+				blackNum++
+			} else if obj.chess[i][j] == White {
+				whiteNum++
+			}
+			if obj.JudgeRule(i, j, Black, false) > 0 || obj.JudgeRule(i, j, White, false) > 0 {
+				isOver = false
+			}
+		}
+	}
+	//界面显示个数
+	obj.labelBlack.SetText(strconv.Itoa(blackNum))
+	obj.labelWhite.SetText(strconv.Itoa(whiteNum))
+	if !isOver {
+		return
+	}
+
+	//执行这一步说明游戏结束
+
+	glib.TimeoutRemove(obj.tipTimerId)
+	glib.TimeoutRemove(obj.leftTimerId)
+
+	var result string
+
+	//判断胜负
+	if blackNum > whiteNum {
+		result = "(我) 蓝蜘蛛赢了\n是否继续游戏"
+	} else if blackNum < whiteNum {
+		result = "(我) 橙蜘蛛赢了\n是否继续游戏"
+	} else {
+		result = "平局\n是否继续游戏"
+	}
+
+	//问题对话框
+	dialog := gtk.NewMessageDialog(
+		obj.window,           //父窗口
+		gtk.DIALOG_MODAL,     //模态对话框
+		gtk.MESSAGE_QUESTION, //问题对话框
+		gtk.BUTTONS_YES_NO,   //按钮
+		result)               //对话框内容
+	ret := dialog.Run()
+	if ret == gtk.RESPONSE_YES { //继续游戏
+		obj.InitChess()
+	} else {
+		gtk.MainQuit() //关闭窗口
+	}
+}
+func (obj *Chessboard) MachinePlay() {
+	//移除定时器
+	glib.TimeoutRemove(obj.machineTimeId)
+
+	max, px, py := 0, -1, -1
+
+	//优先落于四个角落
+
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			//最后一个参数为FALSE
+			num := obj.JudgeRule(i, j, obj.currentRole, false)
+			if num > 0 {
+				//优先四个角 否则找吃子最多的那一个
+				if (i == 0 && j == 0) || (i == 7 && j == 0) || (i == 0 && j == 7) || (i == 7 && j == 7) {
+					px, py = i, j
+					goto End
+				}
+				if num > max {
+					max, px, py = num, i, j
+				}
+			}
+		}
+	}
+End:
+	if px == -1 { //说明机器不能落子
+		obj.ChangeRole() //改变角色
+		return
+	}
+	//机器吃子
+	obj.JudgeRule(px, py, obj.currentRole, true)
+	obj.window.QueueDraw()
+	obj.ChangeRole()
+
+}
+
+/**
  * @description: 方法 改变落子角色
  * @param {*}
  * @return {*}
@@ -236,6 +333,14 @@ func (obj *Chessboard) ChangeRole() {
 		obj.currentRole = White
 	} else {
 		obj.currentRole = Black
+	}
+	obj.JudgeResult() //统计个数，判断胜负
+
+	if obj.currentRole == White {
+		obj.machineTimeId = glib.TimeoutAdd(1000, func() bool {
+			obj.MachinePlay()
+			return true
+		})
 	}
 }
 
@@ -262,6 +367,10 @@ func MousePressEvent(ctx *glib.CallbackContext) {
 	//fmt.Println("x= ", obj.x, ", y =", obj.y)
 	i := (obj.x - obj.startX) / obj.gridW
 	j := (obj.y - obj.startY) / obj.gridH
+
+	if obj.currentRole == White { //如果是白棋下 说明机器下 用户不能点击
+		return
+	}
 
 	if i >= 0 && i <= 7 && j >= 0 && j <= 7 {
 		fmt.Printf("(%d,%d)\n", i, j)
@@ -358,6 +467,7 @@ func (obj *Chessboard) HandleSignal() {
 	obj.buttonClose.Clicked(func() {
 		//关闭定时器
 		glib.TimeoutRemove(obj.tipTimerId)
+		glib.TimeoutRemove(obj.leftTimerId)
 	})
 	obj.buttonClose.Clicked(func() {
 		gtk.MainQuit() //关闭窗口
@@ -418,6 +528,12 @@ func (obj *Chessboard) InitChess() {
 	obj.chess[4][4] = Black
 	obj.chess[3][4] = White
 	obj.chess[4][3] = White
+
+	//更新一下棋盘
+	obj.window.QueueDraw()
+
+	obj.labelBlack.SetText("2")
+	obj.labelWhite.SetText("2")
 
 	//image都先隐藏
 	obj.imageBlack.Hide()
