@@ -1,9 +1,9 @@
 /*
  * @Author: Thinkpaddong
  * @Date: 2021-09-25 20:36:57
- * @LastEditTime: 2021-09-27 23:42:54
+ * @LastEditTime: 2021-09-30 00:07:12
  * @Description:
- * @FilePath: /Test-for-github/Go/lesson2/百度小贴吧小爬虫.go
+ * @FilePath: /Test-for-github/Go/lesson2/百度贴吧爬虫/百度贴吧爬虫.go
  */
 package main
 
@@ -35,7 +35,7 @@ func HttpGet(url string) (res string, err error) {
 	return
 }
 func DoWork(start, end int) {
-	fmt.Println("正在爬取%d 到%d的页面\n", start, end)
+	fmt.Printf("正在爬取%d 到%d的页面\n", start, end)
 	for i := start; i <= end; i++ {
 		url := "https://tieba.baidu.com/f?kw=%E7%BB%9D%E5%9C%B0%E6%B1%82%E7%94%9F&ie=utf-8&pn=" + strconv.Itoa((i-1)*50)
 

@@ -1,14 +1,15 @@
 /*
  * @Author: Thinkpaddong
  * @Date: 2021-09-25 20:13:18
- * @LastEditTime: 2021-09-27 23:43:14
+ * @LastEditTime: 2021-09-30 00:08:22
  * @Description:
- * @FilePath: /Test-for-github/Go/lesson2/http服务器.go
+ * @FilePath: /Test-for-github/Go/lesson2/http服务器/http服务器.go
  */
 
 package main
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -19,10 +20,10 @@ import (
  * @return {*}
  */
 func HandConn(w http.ResponseWriter, req *http.Request) {
-	fmt.Pintln("r.Method:", r.Method)
-	fmt.Pintln("r.URL:", r.URL)
-	fmt.Pintln("r.Header:", r.Header)
-	fmt.Pintln("r.Body:", r.Body)
+	fmt.Println("r.Method:", req.Method)
+	fmt.Println("r.URL:", req.URL)
+	fmt.Println("r.Header:", req.Header)
+	fmt.Println("r.Body:", req.Body)
 	w.Write([]byte("hello.go")) //给客户端回复数据
 }
 func main() {
